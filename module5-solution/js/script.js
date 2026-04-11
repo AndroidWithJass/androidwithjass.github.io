@@ -1,5 +1,5 @@
 $(function () {
-  $("#navbarToggle").blur(function (event) {
+  $("#navbarToggle").blur(function () {
     var screenWidth = window.innerWidth;
     if (screenWidth < 768) {
       $("#collapsable-nav").collapse('hide');
@@ -21,39 +21,33 @@ var menuItemsUrl =
 var menuItemsTitleHtml = "snippets/menu-items-title.html";
 var menuItemHtml = "snippets/menu-item-snippet.html";
 
-// Convenience function
 var insertHtml = function (selector, html) {
-  var targetElem = document.querySelector(selector);
-  targetElem.innerHTML = html;
+  document.querySelector(selector).innerHTML = html;
 };
 
-// Loading icon
 var showLoading = function (selector) {
   var html = "<div class='text-center'>";
   html += "<img src='images/ajax-loader.gif'></div>";
   insertHtml(selector, html);
 };
 
-// Replace {{}} properties
 var insertProperty = function (string, propName, propValue) {
   var propToReplace = "{{" + propName + "}}";
   return string.replace(new RegExp(propToReplace, "g"), propValue);
 };
 
-// Switch active button
 var switchMenuToActive = function () {
   var classes = document.querySelector("#navHomeButton").className;
-  classes = classes.replace(new RegExp("active", "g"), "");
+  classes = classes.replace("active", "");
   document.querySelector("#navHomeButton").className = classes;
 
   classes = document.querySelector("#navMenuButton").className;
   if (classes.indexOf("active") === -1) {
-    classes += " active";
-    document.querySelector("#navMenuButton").className = classes;
+    document.querySelector("#navMenuButton").className += " active";
   }
 };
 
-// 🔥 LOAD HOME
+// ⭐ FIXED PART
 document.addEventListener("DOMContentLoaded", function () {
   showLoading("#main-content");
 
@@ -63,7 +57,6 @@ document.addEventListener("DOMContentLoaded", function () {
     true);
 });
 
-// 🔥 BUILD HOME PAGE
 function buildAndShowHomeHTML (categories) {
 
   $ajaxUtils.sendGetRequest(
@@ -71,25 +64,25 @@ function buildAndShowHomeHTML (categories) {
     function (homeHtml) {
 
       var chosenCategory = chooseRandomCategory(categories);
-      var chosenCategoryShortName = "'" + chosenCategory.short_name + "'";
 
-      var homeHtmlToInsertIntoMainPage =
+      // ⭐ IMPORTANT
+      var chosenCategoryShortName =
+        "'" + chosenCategory.short_name + "'";
+
+      var finalHtml =
         insertProperty(homeHtml,
                        "randomCategoryShortName",
                        chosenCategoryShortName);
 
-      insertHtml("#main-content", homeHtmlToInsertIntoMainPage);
+      insertHtml("#main-content", finalHtml);
     },
     false);
 }
 
-// Random category
 function chooseRandomCategory (categories) {
-  var randomIndex = Math.floor(Math.random() * categories.length);
-  return categories[randomIndex];
+  return categories[Math.floor(Math.random() * categories.length)];
 }
 
-// Load categories
 dc.loadMenuCategories = function () {
   showLoading("#main-content");
 
@@ -98,7 +91,6 @@ dc.loadMenuCategories = function () {
     buildAndShowCategoriesHTML);
 };
 
-// Load menu items
 dc.loadMenuItems = function (categoryShort) {
   showLoading("#main-content");
 
@@ -107,7 +99,6 @@ dc.loadMenuItems = function (categoryShort) {
     buildAndShowMenuItemsHTML);
 };
 
-// Build categories page
 function buildAndShowCategoriesHTML (categories) {
   $ajaxUtils.sendGetRequest(
     categoriesTitleHtml,
@@ -119,125 +110,79 @@ function buildAndShowCategoriesHTML (categories) {
 
           switchMenuToActive();
 
-          var categoriesViewHtml =
+          var html =
             buildCategoriesViewHtml(categories,
-                                    categoriesTitleHtml,
-                                    categoryHtml);
+                                   categoriesTitleHtml,
+                                   categoryHtml);
 
-          insertHtml("#main-content", categoriesViewHtml);
+          insertHtml("#main-content", html);
         },
         false);
     },
     false);
 }
 
-// Build categories HTML
-function buildCategoriesViewHtml(categories,
-                                 categoriesTitleHtml,
-                                 categoryHtml) {
+function buildCategoriesViewHtml(categories, titleHtml, itemHtml) {
 
-  var finalHtml = categoriesTitleHtml;
-  finalHtml += "<section class='row'>";
+  var finalHtml = titleHtml + "<section class='row'>";
 
   for (var i = 0; i < categories.length; i++) {
-    var html = categoryHtml;
+    var html = itemHtml;
 
-    var name = categories[i].name;
-    var short_name = categories[i].short_name;
-
-    html = insertProperty(html, "name", name);
-    html = insertProperty(html, "short_name", short_name);
+    html = insertProperty(html, "name", categories[i].name);
+    html = insertProperty(html, "short_name", categories[i].short_name);
 
     finalHtml += html;
   }
 
-  finalHtml += "</section>";
-  return finalHtml;
+  return finalHtml + "</section>";
 }
 
-// Build menu items page
-function buildAndShowMenuItemsHTML (categoryMenuItems) {
+function buildAndShowMenuItemsHTML (data) {
   $ajaxUtils.sendGetRequest(
     menuItemsTitleHtml,
-    function (menuItemsTitleHtml) {
+    function (titleHtml) {
 
       $ajaxUtils.sendGetRequest(
         menuItemHtml,
-        function (menuItemHtml) {
+        function (itemHtml) {
 
           switchMenuToActive();
 
-          var menuItemsViewHtml =
-            buildMenuItemsViewHtml(categoryMenuItems,
-                                   menuItemsTitleHtml,
-                                   menuItemHtml);
+          var html =
+            buildMenuItemsViewHtml(data, titleHtml, itemHtml);
 
-          insertHtml("#main-content", menuItemsViewHtml);
+          insertHtml("#main-content", html);
         },
         false);
     },
     false);
 }
 
-// Build menu items HTML
-function buildMenuItemsViewHtml(categoryMenuItems,
-                                menuItemsTitleHtml,
-                                menuItemHtml) {
+function buildMenuItemsViewHtml(data, titleHtml, itemHtml) {
 
-  menuItemsTitleHtml =
-    insertProperty(menuItemsTitleHtml,
-                   "name",
-                   categoryMenuItems.category.name);
+  titleHtml = insertProperty(titleHtml, "name", data.category.name);
+  titleHtml = insertProperty(titleHtml, "special_instructions",
+                             data.category.special_instructions);
 
-  menuItemsTitleHtml =
-    insertProperty(menuItemsTitleHtml,
-                   "special_instructions",
-                   categoryMenuItems.category.special_instructions);
+  var finalHtml = titleHtml + "<section class='row'>";
 
-  var finalHtml = menuItemsTitleHtml;
-  finalHtml += "<section class='row'>";
+  var items = data.menu_items;
+  var shortName = data.category.short_name;
 
-  var menuItems = categoryMenuItems.menu_items;
-  var catShortName = categoryMenuItems.category.short_name;
+  for (var i = 0; i < items.length; i++) {
 
-  for (var i = 0; i < menuItems.length; i++) {
-    var html = menuItemHtml;
+    var html = itemHtml;
 
-    html = insertProperty(html, "short_name", menuItems[i].short_name);
-    html = insertProperty(html, "catShortName", catShortName);
-
-    html = insertItemPrice(html, "price_small", menuItems[i].price_small);
-    html = insertItemPortionName(html, "small_portion_name", menuItems[i].small_portion_name);
-
-    html = insertItemPrice(html, "price_large", menuItems[i].price_large);
-    html = insertItemPortionName(html, "large_portion_name", menuItems[i].large_portion_name);
-
-    html = insertProperty(html, "name", menuItems[i].name);
-    html = insertProperty(html, "description", menuItems[i].description);
-
-    if (i % 2 !== 0) {
-      html += "<div class='clearfix visible-lg-block visible-md-block'></div>";
-    }
+    html = insertProperty(html, "short_name", items[i].short_name);
+    html = insertProperty(html, "catShortName", shortName);
+    html = insertProperty(html, "name", items[i].name);
+    html = insertProperty(html, "description", items[i].description);
 
     finalHtml += html;
   }
 
-  finalHtml += "</section>";
-  return finalHtml;
-}
-
-// Price
-function insertItemPrice(html, propName, value) {
-  if (!value) return insertProperty(html, propName, "");
-  value = "$" + value.toFixed(2);
-  return insertProperty(html, propName, value);
-}
-
-// Portion
-function insertItemPortionName(html, propName, value) {
-  if (!value) return insertProperty(html, propName, "");
-  value = "(" + value + ")";
-  return insertProperty(html, propName, value);
+  return finalHtml + "</section>";
 }
 
 global.$dc = dc;
