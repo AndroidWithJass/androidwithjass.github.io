@@ -13,17 +13,18 @@ var dc = {};
 
 var homeHtmlUrl = "snippets/home-snippet.html";
 var allCategoriesUrl =
-  "https://davids-restaurant.herokuapp.com/categories.json";
+  "https://coursera-jhu-default-rtdb.firebaseio.com/categories.json";
 var categoriesTitleHtml = "snippets/categories-title-snippet.html";
 var categoryHtml = "snippets/category-snippet.html";
 var menuItemsUrl =
-  "https://davids-restaurant.herokuapp.com/menu_items/";
+  "https://coursera-jhu-default-rtdb.firebaseio.com/menu_items/";
 var menuItemsTitleHtml = "snippets/menu-items-title.html";
 var menuItemHtml = "snippets/menu-item-snippet.html";
 
-// Insert HTML
+// Convenience function
 var insertHtml = function (selector, html) {
-  document.querySelector(selector).innerHTML = html;
+  var targetElem = document.querySelector(selector);
+  targetElem.innerHTML = html;
 };
 
 // Loading icon
@@ -39,10 +40,10 @@ var insertProperty = function (string, propName, propValue) {
   return string.replace(new RegExp(propToReplace, "g"), propValue);
 };
 
-// Switch active menu
+// Switch active button
 var switchMenuToActive = function () {
   var classes = document.querySelector("#navHomeButton").className;
-  classes = classes.replace("active", "");
+  classes = classes.replace(new RegExp("active", "g"), "");
   document.querySelector("#navHomeButton").className = classes;
 
   classes = document.querySelector("#navMenuButton").className;
@@ -52,37 +53,34 @@ var switchMenuToActive = function () {
   }
 };
 
-// On page load
+// 🔥 LOAD HOME
 document.addEventListener("DOMContentLoaded", function () {
   showLoading("#main-content");
 
   $ajaxUtils.sendGetRequest(
     allCategoriesUrl,
     buildAndShowHomeHTML,
-    true
-  );
+    true);
 });
 
-// Build home page
+// 🔥 BUILD HOME PAGE
 function buildAndShowHomeHTML (categories) {
+
   $ajaxUtils.sendGetRequest(
     homeHtmlUrl,
     function (homeHtml) {
 
-      var chosenCategoryShortName =
-        chooseRandomCategory(categories).short_name;
+      var chosenCategory = chooseRandomCategory(categories);
+      var chosenCategoryShortName = "'" + chosenCategory.short_name + "'";
 
       var homeHtmlToInsertIntoMainPage =
-        insertProperty(
-          homeHtml,
-          "randomCategoryShortName",
-          "'" + chosenCategoryShortName + "'"
-        );
+        insertProperty(homeHtml,
+                       "randomCategoryShortName",
+                       chosenCategoryShortName);
 
       insertHtml("#main-content", homeHtmlToInsertIntoMainPage);
     },
-    false
-  );
+    false);
 }
 
 // Random category
@@ -94,98 +92,152 @@ function chooseRandomCategory (categories) {
 // Load categories
 dc.loadMenuCategories = function () {
   showLoading("#main-content");
+
   $ajaxUtils.sendGetRequest(
     allCategoriesUrl,
-    buildAndShowCategoriesHTML
-  );
+    buildAndShowCategoriesHTML);
 };
 
 // Load menu items
 dc.loadMenuItems = function (categoryShort) {
   showLoading("#main-content");
+
   $ajaxUtils.sendGetRequest(
     menuItemsUrl + categoryShort + ".json",
-    buildAndShowMenuItemsHTML
-  );
+    buildAndShowMenuItemsHTML);
 };
 
-// Build categories HTML
+// Build categories page
 function buildAndShowCategoriesHTML (categories) {
   $ajaxUtils.sendGetRequest(
     categoriesTitleHtml,
     function (categoriesTitleHtml) {
+
       $ajaxUtils.sendGetRequest(
         categoryHtml,
         function (categoryHtml) {
 
           switchMenuToActive();
 
-          var finalHtml = categoriesTitleHtml + "<section class='row'>";
+          var categoriesViewHtml =
+            buildCategoriesViewHtml(categories,
+                                    categoriesTitleHtml,
+                                    categoryHtml);
 
-          for (var i = 0; i < categories.length; i++) {
-            var html = categoryHtml;
-            html = insertProperty(html, "name", categories[i].name);
-            html = insertProperty(html, "short_name", categories[i].short_name);
-            finalHtml += html;
-          }
-
-          finalHtml += "</section>";
-          insertHtml("#main-content", finalHtml);
+          insertHtml("#main-content", categoriesViewHtml);
         },
-        false
-      );
+        false);
     },
-    false
-  );
+    false);
 }
 
-// Build menu items
+// Build categories HTML
+function buildCategoriesViewHtml(categories,
+                                 categoriesTitleHtml,
+                                 categoryHtml) {
+
+  var finalHtml = categoriesTitleHtml;
+  finalHtml += "<section class='row'>";
+
+  for (var i = 0; i < categories.length; i++) {
+    var html = categoryHtml;
+
+    var name = categories[i].name;
+    var short_name = categories[i].short_name;
+
+    html = insertProperty(html, "name", name);
+    html = insertProperty(html, "short_name", short_name);
+
+    finalHtml += html;
+  }
+
+  finalHtml += "</section>";
+  return finalHtml;
+}
+
+// Build menu items page
 function buildAndShowMenuItemsHTML (categoryMenuItems) {
   $ajaxUtils.sendGetRequest(
     menuItemsTitleHtml,
     function (menuItemsTitleHtml) {
+
       $ajaxUtils.sendGetRequest(
         menuItemHtml,
         function (menuItemHtml) {
 
           switchMenuToActive();
 
-          var finalHtml =
-            insertProperty(menuItemsTitleHtml, "name",
-              categoryMenuItems.category.name);
+          var menuItemsViewHtml =
+            buildMenuItemsViewHtml(categoryMenuItems,
+                                   menuItemsTitleHtml,
+                                   menuItemHtml);
 
-          finalHtml =
-            insertProperty(finalHtml, "special_instructions",
-              categoryMenuItems.category.special_instructions);
-
-          finalHtml += "<section class='row'>";
-
-          var items = categoryMenuItems.menu_items;
-          var catShortName = categoryMenuItems.category.short_name;
-
-          for (var i = 0; i < items.length; i++) {
-            var html = menuItemHtml;
-
-            html = insertProperty(html, "short_name", items[i].short_name);
-            html = insertProperty(html, "catShortName", catShortName);
-            html = insertProperty(html, "name", items[i].name);
-            html = insertProperty(html, "description", items[i].description);
-
-            if (i % 2 !== 0) {
-              html += "<div class='clearfix visible-lg-block visible-md-block'></div>";
-            }
-
-            finalHtml += html;
-          }
-
-          finalHtml += "</section>";
-          insertHtml("#main-content", finalHtml);
+          insertHtml("#main-content", menuItemsViewHtml);
         },
-        false
-      );
+        false);
     },
-    false
-  );
+    false);
+}
+
+// Build menu items HTML
+function buildMenuItemsViewHtml(categoryMenuItems,
+                                menuItemsTitleHtml,
+                                menuItemHtml) {
+
+  menuItemsTitleHtml =
+    insertProperty(menuItemsTitleHtml,
+                   "name",
+                   categoryMenuItems.category.name);
+
+  menuItemsTitleHtml =
+    insertProperty(menuItemsTitleHtml,
+                   "special_instructions",
+                   categoryMenuItems.category.special_instructions);
+
+  var finalHtml = menuItemsTitleHtml;
+  finalHtml += "<section class='row'>";
+
+  var menuItems = categoryMenuItems.menu_items;
+  var catShortName = categoryMenuItems.category.short_name;
+
+  for (var i = 0; i < menuItems.length; i++) {
+    var html = menuItemHtml;
+
+    html = insertProperty(html, "short_name", menuItems[i].short_name);
+    html = insertProperty(html, "catShortName", catShortName);
+
+    html = insertItemPrice(html, "price_small", menuItems[i].price_small);
+    html = insertItemPortionName(html, "small_portion_name", menuItems[i].small_portion_name);
+
+    html = insertItemPrice(html, "price_large", menuItems[i].price_large);
+    html = insertItemPortionName(html, "large_portion_name", menuItems[i].large_portion_name);
+
+    html = insertProperty(html, "name", menuItems[i].name);
+    html = insertProperty(html, "description", menuItems[i].description);
+
+    if (i % 2 !== 0) {
+      html += "<div class='clearfix visible-lg-block visible-md-block'></div>";
+    }
+
+    finalHtml += html;
+  }
+
+  finalHtml += "</section>";
+  return finalHtml;
+}
+
+// Price
+function insertItemPrice(html, propName, value) {
+  if (!value) return insertProperty(html, propName, "");
+  value = "$" + value.toFixed(2);
+  return insertProperty(html, propName, value);
+}
+
+// Portion
+function insertItemPortionName(html, propName, value) {
+  if (!value) return insertProperty(html, propName, "");
+  value = "(" + value + ")";
+  return insertProperty(html, propName, value);
 }
 
 global.$dc = dc;
